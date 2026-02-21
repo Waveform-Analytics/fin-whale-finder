@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+uv.lock
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (don't commit large files)
+data/raw/
+data/processed/
+*.wav
+*.flac
+*.hdf5
+*.h5
+*.nc
+
+# Model artifacts
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.pkl
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env

@@ -1,0 +1,6 @@
+[project]
+name = "fin-whale-finder"
+version = "0.1.0"
+description = "Fin whale call detection in OOI hydrophone data — learning modern detection/classification approaches"
+requires-python = ">=3.13"
+dependencies = []
