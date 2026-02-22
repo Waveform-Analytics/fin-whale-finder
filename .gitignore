@@ -13,7 +13,7 @@ venv/
 env/
 
 # uv
-uv.lock
+# uv.lock is committed for reproducible builds
 
 # Jupyter
 .ipynb_checkpoints/
@@ -21,6 +21,8 @@ uv.lock
 # Data (don't commit large files)
 data/raw/
 data/processed/
+data/cache/
+results/
 *.wav
 *.flac
 *.hdf5

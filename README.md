@@ -36,8 +36,18 @@ OOI broadband hydrophone data, accessed via OOI JupyterHub. Data access utilitie
 git clone https://github.com/Waveform-Analytics/fin-whale-finder.git
 cd fin-whale-finder
 uv sync
+
+# Download a week of data from OOI
+uv run python scripts/fetch_week_data.py
+
+# Launch spectrogram viewer (local only - won't work on OOI JupyterHub)
+uv run streamlit run scripts/spectrogram_viewer.py
 ```
 
-## Status
+## Current Status
 
-Just getting started. See [docs/roadmap.md](docs/roadmap.md) for the plan.
+- **Data**: Jan 1-7, 2026 from Axial_Base hydrophone (168 hours)
+- **Verified**: Fin whale 20 Hz calls are visible in spectrograms
+- **Next**: Integrate PERCH for automated detection
+
+See [docs/HANDOVER.md](docs/HANDOVER.md) for detailed handover notes.

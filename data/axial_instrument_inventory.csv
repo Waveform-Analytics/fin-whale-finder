@@ -1,0 +1,7 @@
+instrument_code,instrument_path,file_count,earliest_date,latest_date,file_extensions
+RS03CCAL-MJ03F-06-OBSBBA301-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03CCAL-MJ03F-06-OBSBBA301-streamed-antelope_metadata,1182,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"
+RS03CCAL-MJ03F-06-HYDLFA305-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03CCAL-MJ03F-06-HYDLFA305-streamed-antelope_metadata,874,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"
+RS03AXBS-MJ03A-05-OBSBBA303-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03AXBS-MJ03A-05-OBSBBA303-streamed-antelope_metadata,1185,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"
+RS03AXBS-MJ03A-05-HYDLFA301-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03AXBS-MJ03A-05-HYDLFA301-streamed-antelope_metadata,972,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"
+RS03ECAL-MJ03E-09-HYDLFA304-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03ECAL-MJ03E-09-HYDLFA304-streamed-antelope_metadata,920,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"
+RS03ECAL-MJ03E-09-OBSBBA302-streamed-antelope_metadata,/home/jovyan/ooi/kdata/RS03ECAL-MJ03E-09-OBSBBA302-streamed-antelope_metadata,1176,2015-12-14,2026-02-20,".json, .nc, .ncml, .txt"

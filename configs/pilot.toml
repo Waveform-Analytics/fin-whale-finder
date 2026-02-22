@@ -1,0 +1,6 @@
+[manifest]
+station = "RS03AXPS"
+start = "2025-01-01T00:00:00Z"
+end = "2025-01-02T00:00:00Z"
+window_minutes = 10
+output_path = "data/manifests/pilot_manifest.csv"

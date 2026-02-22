@@ -3,4 +3,28 @@ name = "fin-whale-finder"
 version = "0.1.0"
 description = "Fin whale call detection in OOI hydrophone data — learning modern detection/classification approaches"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "jupyter-marimo-proxy>=0.0.4",
+    "marimo>=0.20.1",
+    "matplotlib>=3.10.8",
+    "netcdf4>=1.7.4",
+    "ooipy>=1.2.5",
+    "setuptools==69.5.1",
+    "streamlit>=1.54.0",
+    "tqdm>=4.67.3",
+    "xarray>=2026.2.0",
+    "yooink>=0.1.9",
+]
+
+[project.scripts]
+fwf = "fin_whale_finder.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
