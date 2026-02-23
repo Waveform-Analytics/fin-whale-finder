@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from tqdm import tqdm
 
 from fin_whale_finder.data_access import get_hydrophone_data, _make_cache_key
 
@@ -41,7 +40,7 @@ def main():
     all_data = []
     all_times = []
 
-    for day in tqdm(days, desc="Fetching days", unit="day"):
+    for day in days:
         start = datetime(year, month, day)
         end = (
             datetime(year, month, day + 1)
@@ -49,15 +48,12 @@ def main():
             else datetime(year, month, end_day)
         )
 
-        # Check cache status before fetching
         if _is_cached(node, start, end):
-            status = "[CACHE]"
+            print(f"[CACHE] Jan {day}")
             cached_count += 1
         else:
-            status = "[M2M  ]"
+            print(f"[M2M  ] Jan {day}")
             downloaded_count += 1
-
-        tqdm.write(f"  {status} Jan {day}")
 
         data = get_hydrophone_data(
             node=node,
@@ -71,7 +67,7 @@ def main():
             all_data.append(data.data)
             all_times.append(data.times() + offset)
         else:
-            tqdm.write(f"  [EMPTY] Warning: No data for Jan {day}")
+            print(f"[EMPTY] Warning: No data for Jan {day}")
 
     print()
     print(f"Summary: {cached_count} from cache, {downloaded_count} downloaded")

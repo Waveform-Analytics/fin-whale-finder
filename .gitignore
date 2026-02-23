@@ -23,11 +23,6 @@ data/raw/
 data/processed/
 data/cache/
 results/
-*.wav
-*.flac
-*.hdf5
-*.h5
-*.nc
 
 # Model artifacts
 models/*.pt
