@@ -22,7 +22,7 @@ Each phase builds on the previous: discover candidates, then detect precisely, t
 
 ## Data
 
-OOI broadband hydrophone data, accessed via OOI JupyterHub. Data access utilities will live in this repo initially and may be extracted into a separate package later.
+OOI hydrophone data, accessed via OOI JupyterHub. Data access utilities will live in this repo initially and may be extracted into a separate package later.
 
 ## Related projects
 
@@ -46,8 +46,9 @@ uv run streamlit run scripts/spectrogram_viewer.py
 
 ## Current Status
 
-- **Data**: Jan 1-7, 2026 from Axial_Base hydrophone (168 hours)
-- **Verified**: Fin whale 20 Hz calls are visible in spectrograms
-- **Next**: Integrate PERCH for automated detection
+- **Data**: Jan 1-7, 2026 from Axial_Base hydrophone (168 hours, 200 Hz)
+- **Verified**: Fin whale 20 Hz calls visible in spectrograms
+- **Labels**: 235 clips labeled via keyboard-driven Streamlit labeling tool
+- **Next**: Integrate Perch 2.0 for embedding-based candidate discovery
 
-See [docs/HANDOVER.md](docs/HANDOVER.md) for detailed handover notes.
+See [docs/roadmap.md](docs/roadmap.md) for the full roadmap and technical details.
