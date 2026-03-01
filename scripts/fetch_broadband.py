@@ -26,19 +26,32 @@ These files are read by notebooks/soundscape_explore.py.
 import argparse
 import threading
 import time
+import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from fin_whale_finder.data_access import get_hydrophone_data, _make_cache_key
 
-# --- Defaults (match notebooks/soundscape_explore.py config) ---
-DEFAULT_NODE = "Axial_Base_Seafloor"
-DEFAULT_START = "2026-01-03T12:00:00"
-DEFAULT_END = "2026-01-03T18:00:00"
-DEFAULT_CHUNK_HOURS = 1
+# Fallback defaults if configs/soundscape.toml is missing or incomplete
+_FALLBACK = {
+    "node": "Axial_Base_Seafloor",
+    "start": "2025-06-03T12:00:00",
+    "end": "2025-06-03T18:00:00",
+    "chunk_hours": 1,
+}
 DEFAULT_WORKERS = 6
 CACHE_DIR = Path("data/cache_broadband")
+
+
+def _load_toml_config():
+    """Load soundscape config from configs/soundscape.toml (relative to project root)."""
+    config_path = Path(__file__).parent.parent / "configs" / "soundscape.toml"
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            cfg = tomllib.load(f)
+        return cfg, config_path
+    return {}, None
 
 print_lock = threading.Lock()
 
@@ -48,14 +61,24 @@ def log(msg):
         print(msg, flush=True)
 
 
+def empty_marker(cache_dir, key):
+    return cache_dir / (key + ".empty")
+
+
 def fetch_chunk(node, start, end, cache_dir, chunk_num, n_total):
     """Download one chunk, printing start/done with timing and file size."""
     label = f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
-    cache_file = cache_dir / _make_cache_key(node, start, end)
+    key = _make_cache_key(node, start, end)
+    cache_file = cache_dir / key
+    marker = empty_marker(cache_dir, key)
 
     if cache_file.exists():
         size_gb = cache_file.stat().st_size / 1e9
         log(f"  [CACHE ] {label}  ({size_gb:.2f} GB already cached)")
+        return start, end, "cached"
+
+    if marker.exists():
+        log(f"  [CACHE ] {label}  (previously confirmed empty — OOI gap)")
         return start, end, "cached"
 
     log(f"  [START ] {label}  (chunk {chunk_num}/{n_total})")
@@ -72,7 +95,8 @@ def fetch_chunk(node, start, end, cache_dir, chunk_num, n_total):
 
     elapsed = (time.time() - t0) / 60
     if data is None:
-        log(f"  [EMPTY ] {label}  ({elapsed:.1f} min — no data returned)")
+        marker.touch()
+        log(f"  [EMPTY ] {label}  ({elapsed:.1f} min — no data, gap marked)")
         return start, end, "empty"
 
     size_gb = cache_file.stat().st_size / 1e9 if cache_file.exists() else 0
@@ -90,16 +114,25 @@ def size_monitor(cache_dir, chunks, node, stop_event, interval=30):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch broadband OOI hydrophone data")
-    parser.add_argument("--node", default=DEFAULT_NODE)
-    parser.add_argument("--start", default=DEFAULT_START)
-    parser.add_argument("--end", default=DEFAULT_END)
-    parser.add_argument("--chunk-hours", type=int, default=DEFAULT_CHUNK_HOURS)
+    cfg, cfg_path = _load_toml_config()
+
+    parser = argparse.ArgumentParser(
+        description="Fetch broadband OOI hydrophone data",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Defaults are read from configs/soundscape.toml. CLI args override the config.",
+    )
+    parser.add_argument("--node", default=cfg.get("node", _FALLBACK["node"]))
+    parser.add_argument("--start", default=cfg.get("start", _FALLBACK["start"]))
+    parser.add_argument("--end", default=cfg.get("end", _FALLBACK["end"]))
+    parser.add_argument("--chunk-hours", type=int, default=cfg.get("chunk_hours", _FALLBACK["chunk_hours"]))
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
                         help="Parallel download workers (default 6, lower if OOI throttles)")
     parser.add_argument("--status-interval", type=int, default=30,
                         help="Seconds between status updates (default 30)")
     args = parser.parse_args()
+
+    if cfg_path:
+        print(f"Config:  {cfg_path}")
 
     start = datetime.fromisoformat(args.start)
     end = datetime.fromisoformat(args.end)

@@ -1,0 +1,19 @@
+# Soundscape exploration configuration
+# This is the single source of truth for both:
+#   scripts/fetch_broadband.py  (downloads data)
+#   notebooks/soundscape_explore.py  (analyzes it)
+#
+# To run a different date range, change start/end here, then:
+#   uv run python scripts/fetch_broadband.py   # download
+#   uv run python notebooks/soundscape_explore.py   # analyze
+#
+# Output directories are automatically namespaced by run slug
+# (derived from start/end), so old results are never clobbered.
+
+node = "Axial_Base_Seafloor"  # broadband 64 kHz hydrophone
+start = "2025-06-03T12:00:00"
+end = "2025-06-03T18:00:00"
+chunk_hours = 1               # must match when fetch was run
+
+perch_model = "perch_v2"
+n_clusters = 8

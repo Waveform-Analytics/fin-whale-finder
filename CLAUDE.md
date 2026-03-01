@@ -84,7 +84,7 @@ Coverage: 2015-12-14 to present (continuous). All timestamps UTC.
 
 ## Dependencies and environment
 
-- Python 3.13, managed with `uv` (never pip)
+- Python 3.12, managed with `uv` (never pip)
 - PyTorch + torchvision — spectrogram image classification
 - TensorFlow 2.20 + perch-hoplite — Perch 2.0 embeddings (broadband soundscape work)
 - Both coexist without conflicts

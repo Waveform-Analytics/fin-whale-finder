@@ -39,8 +39,9 @@ def _(mo):
 
 @app.cell
 def _():
-    """Imports and configuration."""
+    """Imports."""
     import pickle
+    import tomllib
     from datetime import datetime
     from pathlib import Path
 
@@ -51,19 +52,14 @@ def _():
     from scipy import signal
     from scipy.io import wavfile
 
-    # Output directory for saved figures (viewable in JupyterHub file browser)
-    FIGURES_DIR = Path(__file__).parent.parent / "results" / "soundscape_figures"
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Figures will be saved to: {FIGURES_DIR}")
-
     return (
-        FIGURES_DIR,
         Path,
         datetime,
         np,
         pickle,
         plt,
         signal,
+        tomllib,
         wavfile,
     )
 
@@ -90,36 +86,45 @@ def _(mo):
 
 
 @app.cell
-def _(Path):
-    # --- Configuration ---
-    NODE = "Axial_Base_Seafloor"  # broadband 64 kHz instrument
+def _(Path, datetime, tomllib):
+    # --- Load config from TOML (single source of truth) ---
+    _config_path = Path(__file__).parent.parent / "configs" / "soundscape.toml"
+    with open(_config_path, "rb") as _f:
+        _cfg = tomllib.load(_f)
 
-    # Time range: 6 hours starting Jan 3, 2026 noon
-    # (mid-week in our pilot data range, daytime start to capture day/night transition)
-    START = "2026-01-03T12:00:00"
-    END = "2026-01-03T18:00:00"
+    NODE = _cfg["node"]
+    START = _cfg["start"]
+    END = _cfg["end"]
+    FETCH_CHUNK_HOURS = _cfg["chunk_hours"]
+    PERCH_MODEL_NAME = _cfg["perch_model"]
+    N_CLUSTERS = _cfg["n_clusters"]
 
-    # Must match the chunk size used when running scripts/fetch_broadband.py
-    FETCH_CHUNK_HOURS = 1
+    # Derive a slug for namespacing outputs — changing the date range
+    # automatically writes to a new directory, never clobbering old results.
+    _start_dt = datetime.fromisoformat(START)
+    _end_dt = datetime.fromisoformat(END)
+    _slug = f"{_start_dt.strftime('%Y-%m-%d')}_{_start_dt.strftime('%Hh')}-{_end_dt.strftime('%Hh')}"
 
-    # Perch embedding parameters
-    PERCH_MODEL_NAME = "perch_v2"
-
-    # Output paths
     PROJECT_ROOT = Path(__file__).parent.parent
     CACHE_DIR = PROJECT_ROOT / "data" / "cache_broadband"
-    WAV_DIR = PROJECT_ROOT / "data" / "wav_broadband"
-    EMBEDDING_DIR = PROJECT_ROOT / "data" / "embeddings"
+    WAV_DIR = PROJECT_ROOT / "data" / "wav_broadband" / _slug
+    EMBEDDING_DIR = PROJECT_ROOT / "data" / "embeddings" / _slug
+    FIGURES_DIR = PROJECT_ROOT / "results" / "soundscape_figures" / _slug
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(f"Node: {NODE}")
-    print(f"Range: {START} to {END}")
-    print(f"Perch model: {PERCH_MODEL_NAME}")
+    print(f"Config: {_config_path}")
+    print(f"Node:   {NODE}")
+    print(f"Range:  {START} → {END}")
+    print(f"Run:    {_slug}")
+    print(f"Figs:   {FIGURES_DIR}")
 
     return (
         CACHE_DIR,
         EMBEDDING_DIR,
         END,
         FETCH_CHUNK_HOURS,
+        FIGURES_DIR,
+        N_CLUSTERS,
         NODE,
         PERCH_MODEL_NAME,
         PROJECT_ROOT,
@@ -160,8 +165,11 @@ def _(CACHE_DIR, END, FETCH_CHUNK_HOURS, NODE, START, datetime, pickle):
         _expected.append((CACHE_DIR / _key, _current, _chunk_end))
         _current = _chunk_end
 
-    # Fail fast if any files are missing
-    _missing = [str(f) for f, _, _ in _expected if not f.exists()]
+    # Fail fast if any files are missing (neither .pkl nor .empty marker exists)
+    _missing = [
+        str(f) for f, _, _ in _expected
+        if not f.exists() and not (f.parent / (f.name + ".empty")).exists()
+    ]
     if _missing:
         raise FileNotFoundError(
             f"Missing {len(_missing)} cache file(s):\n" +
@@ -170,9 +178,13 @@ def _(CACHE_DIR, END, FETCH_CHUNK_HOURS, NODE, START, datetime, pickle):
             "  uv run python scripts/fetch_broadband.py"
         )
 
-    # Load from cache
+    # Load from cache, skipping OOI gaps (marked with .empty)
     broadband_chunks = []
     for _cache_file, _t0, _t1 in _expected:
+        _marker = _cache_file.parent / (_cache_file.name + ".empty")
+        if _marker.exists():
+            print(f"Skipping {_t0.isoformat()} to {_t1.isoformat()} (OOI gap)")
+            continue
         print(f"Loading {_t0.isoformat()} to {_t1.isoformat()}...")
         with open(_cache_file, "rb") as _f:
             _chunk = pickle.load(_f)
@@ -204,10 +216,21 @@ def _(WAV_DIR, broadband_chunks, np, wavfile):
     wav_files = []
 
     for _chunk in broadband_chunks:
-        _data = np.array(_chunk.data, dtype=np.float32)
         _fs = round(_chunk.stats.sampling_rate)
         _starttime = _chunk.stats.starttime
         _timestamp = _starttime.strftime("%Y-%m-%dT%H-%M")
+        _filename = f"broadband_{_timestamp}.wav"
+        _filepath = WAV_DIR / _filename
+
+        if _filepath.exists():
+            wav_files.append(_filepath)
+            print(f"Cached  {_filename} ({_fs} Hz)")
+            continue
+
+        _data = np.array(_chunk.data, dtype=np.float32)
+
+        # Replace any NaN/Inf from instrument glitches or data gaps with zeros
+        _data = np.nan_to_num(_data, nan=0.0, posinf=0.0, neginf=0.0)
 
         # Remove DC offset and normalize
         _data = _data - _data.mean()
@@ -215,11 +238,9 @@ def _(WAV_DIR, broadband_chunks, np, wavfile):
         if _peak > 0:
             _data = _data / _peak
 
-        _filename = f"broadband_{_timestamp}.wav"
-        _filepath = WAV_DIR / _filename
         wavfile.write(_filepath, _fs, _data)
         wav_files.append(_filepath)
-        print(f"Wrote {_filename} ({_fs} Hz, {len(_data)/_fs:.0f}s)")
+        print(f"Wrote   {_filename} ({_fs} Hz, {len(_data)/_fs:.0f}s)")
 
     print(f"\n{len(wav_files)} WAV files in {WAV_DIR}")
 
@@ -446,6 +467,7 @@ def _(mo):
 @app.cell
 def _(
     FIGURES_DIR,
+    N_CLUSTERS,
     all_file_indices,
     all_offsets,
     np,
@@ -455,16 +477,19 @@ def _(
     wav_files,
     wavfile,
 ):
+    import math as _math
     from sklearn.cluster import KMeans
 
     # Find clusters in UMAP space
-    _n_clusters = 8
+    _n_clusters = N_CLUSTERS
     _kmeans = KMeans(n_clusters=_n_clusters, random_state=42, n_init=10)
     cluster_labels = _kmeans.fit_predict(umap_coords)
 
     # For each cluster, pick the point closest to the centroid
-    fig_clusters, axes_cl = plt.subplots(2, 4, figsize=(18, 8))
-    axes_cl = axes_cl.flatten()
+    _ncols = min(_n_clusters, 4)
+    _nrows = _math.ceil(_n_clusters / _ncols)
+    fig_clusters, axes_cl = plt.subplots(_nrows, _ncols, figsize=(18, _nrows * 4 + 1))
+    axes_cl = np.array(axes_cl).flatten()
 
     for _c in range(_n_clusters):
         _mask = cluster_labels == _c
@@ -500,9 +525,9 @@ def _(
             f"File {_file_idx}, offset {_offset_s:.0f}s",
             fontsize=9,
         )
-        if _c % 4 == 0:
+        if _c % _ncols == 0:
             axes_cl[_c].set_ylabel("Freq (Hz)")
-        if _c >= 4:
+        if _c >= _ncols * (_nrows - 1):
             axes_cl[_c].set_xlabel("Time (s)")
 
     plt.suptitle("Example spectrograms from each cluster", fontsize=13)
