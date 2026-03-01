@@ -189,7 +189,6 @@ def get_hydrophone_data(
             endtime,
             node,
             verbose=verbose,
-            merge_traces=True,
             **ooipy_kwargs,
         )
 

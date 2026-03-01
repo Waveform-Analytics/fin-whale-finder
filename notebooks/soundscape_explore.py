@@ -93,14 +93,13 @@ def _(mo):
 def _(Path):
     # --- Configuration ---
     NODE = "Axial_Base_Seafloor"  # broadband 64 kHz instrument
-    LOW_FREQ = False               # broadband, not low-frequency
 
     # Time range: 6 hours starting Jan 3, 2026 noon
     # (mid-week in our pilot data range, daytime start to capture day/night transition)
     START = "2026-01-03T12:00:00"
     END = "2026-01-03T18:00:00"
 
-    # How long each chunk is for fetching (OOI downloads work better in chunks)
+    # Must match the chunk size used when running scripts/fetch_broadband.py
     FETCH_CHUNK_HOURS = 1
 
     # Perch embedding parameters
@@ -121,7 +120,6 @@ def _(Path):
         EMBEDDING_DIR,
         END,
         FETCH_CHUNK_HOURS,
-        LOW_FREQ,
         NODE,
         PERCH_MODEL_NAME,
         PROJECT_ROOT,
@@ -133,69 +131,59 @@ def _(Path):
 @app.cell
 def _(mo):
     mo.md("""
-    ## 2. Fetch broadband data
+    ## 2. Load broadband data from cache
 
-    Downloads the data from OOI in 1-hour chunks. On JupyterHub this should
-    take a few minutes. On a laptop it would be much slower.
+    Loads pre-fetched broadband data from the local cache. If files are missing,
+    run the fetch script first:
 
-    Each chunk is cached as a pickle file so you don't have to re-download
-    if you re-run the notebook.
+    ```bash
+    uv run python scripts/fetch_broadband.py
+    ```
     """)
     return
 
 
 @app.cell
-def _(
-    CACHE_DIR,
-    END,
-    FETCH_CHUNK_HOURS,
-    LOW_FREQ,
-    NODE,
-    START,
-    datetime,
-    pickle,
-):
-    from fin_whale_finder.data_access import get_hydrophone_data
-
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+def _(CACHE_DIR, END, FETCH_CHUNK_HOURS, NODE, START, datetime, pickle):
+    from datetime import timedelta
 
     _start = datetime.fromisoformat(START)
     _end = datetime.fromisoformat(END)
 
-    # Fetch in 1-hour chunks
-    _chunk_hours = FETCH_CHUNK_HOURS
+    # Build expected cache filenames using the same key format as data_access.py
     _current = _start
-    broadband_chunks = []
-
+    _expected = []
     while _current < _end:
-        _chunk_end = min(
-            _current + __import__("datetime").timedelta(hours=_chunk_hours),
-            _end,
-        )
-        print(f"Fetching {_current.isoformat()} to {_chunk_end.isoformat()}...")
-
-        _data = get_hydrophone_data(
-            node=NODE,
-            starttime=_current,
-            endtime=_chunk_end,
-            low_freq=LOW_FREQ,
-            cache_dir=CACHE_DIR,
-            verbose=True,
-        )
-
-        if _data is not None:
-            broadband_chunks.append(_data)
-            _fs = round(_data.stats.sampling_rate)
-            _n = len(_data.data)
-            print(f"  Got {_n:,} samples ({_n/_fs:.0f}s) at {_fs} Hz")
-        else:
-            print(f"  No data returned for this chunk")
-
+        _chunk_end = min(_current + timedelta(hours=FETCH_CHUNK_HOURS), _end)
+        _node_clean = NODE.replace(" ", "_").replace("/", "_")
+        _key = f"{_node_clean}_{_current.strftime('%Y-%m-%d_%H-%M-%S')}_{_chunk_end.strftime('%Y-%m-%d_%H-%M-%S')}.pkl"
+        _expected.append((CACHE_DIR / _key, _current, _chunk_end))
         _current = _chunk_end
 
-    print(f"\nFetched {len(broadband_chunks)} chunks")
+    # Fail fast if any files are missing
+    _missing = [str(f) for f, _, _ in _expected if not f.exists()]
+    if _missing:
+        raise FileNotFoundError(
+            f"Missing {len(_missing)} cache file(s):\n" +
+            "\n".join(f"  {f}" for f in _missing) +
+            "\n\nRun the fetch script first:\n" +
+            "  uv run python scripts/fetch_broadband.py"
+        )
 
-    return broadband_chunks, get_hydrophone_data
+    # Load from cache
+    broadband_chunks = []
+    for _cache_file, _t0, _t1 in _expected:
+        print(f"Loading {_t0.isoformat()} to {_t1.isoformat()}...")
+        with open(_cache_file, "rb") as _f:
+            _chunk = pickle.load(_f)
+        broadband_chunks.append(_chunk)
+        _fs = round(_chunk.stats.sampling_rate)
+        _n = len(_chunk.data)
+        print(f"  {_n:,} samples ({_n/_fs:.0f}s) at {_fs} Hz")
+
+    print(f"\nLoaded {len(broadband_chunks)} chunks")
+
+    return (broadband_chunks,)
 
 
 @app.cell
