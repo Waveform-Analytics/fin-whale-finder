@@ -38,6 +38,7 @@ models/*.pkl
 # OS
 .DS_Store
 Thumbs.db
+.nfs*
 
 # Environment variables
 .env
