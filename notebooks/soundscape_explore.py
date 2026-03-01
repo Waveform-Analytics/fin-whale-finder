@@ -44,15 +44,22 @@ def _():
     from datetime import datetime
     from pathlib import Path
 
+    import matplotlib
+    matplotlib.use("Agg")  # non-interactive backend for headless environments
     import matplotlib.pyplot as plt
     import numpy as np
     from scipy import signal
     from scipy.io import wavfile
 
+    # Output directory for saved figures (viewable in JupyterHub file browser)
+    FIGURES_DIR = Path(__file__).parent.parent / "results" / "soundscape_figures"
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    print(f"Figures will be saved to: {FIGURES_DIR}")
+
     return (
+        FIGURES_DIR,
         Path,
         datetime,
-        matplotlib,
         np,
         pickle,
         plt,
@@ -246,7 +253,7 @@ def _(mo):
 
 
 @app.cell
-def _(broadband_chunks, np, plt, signal):
+def _(FIGURES_DIR, broadband_chunks, np, plt, signal):
     # Grab first 60 seconds of first chunk for a quick look
     _chunk = broadband_chunks[0]
     _data = np.array(_chunk.data, dtype=np.float32)
@@ -276,6 +283,8 @@ def _(broadband_chunks, np, plt, signal):
     ax_low.set_ylim(60, 16000)
 
     plt.tight_layout()
+    fig_spec.savefig(FIGURES_DIR / "01_broadband_spectrogram.png", dpi=150, bbox_inches="tight")
+    print(f"Saved: {FIGURES_DIR / '01_broadband_spectrogram.png'}")
     fig_spec
 
     return
@@ -397,7 +406,7 @@ def _(mo):
 
 
 @app.cell
-def _(all_embeddings, all_offsets, all_file_indices, np, plt):
+def _(FIGURES_DIR, all_embeddings, all_offsets, all_file_indices, np, plt):
     from umap import UMAP
 
     print("Running UMAP (this may take a moment)...")
@@ -422,9 +431,11 @@ def _(all_embeddings, all_offsets, all_file_indices, np, plt):
     ax_umap.set_xlabel("UMAP 1")
     ax_umap.set_ylabel("UMAP 2")
     ax_umap.set_title("Perch 2.0 embeddings — UMAP projection\n(each point = one 5-second window)")
+    fig_umap.savefig(FIGURES_DIR / "02_umap_by_time.png", dpi=150, bbox_inches="tight")
+    print(f"Saved: {FIGURES_DIR / '02_umap_by_time.png'}")
     fig_umap
 
-    return umap_coords
+    return (umap_coords,)
 
 
 @app.cell
@@ -446,6 +457,7 @@ def _(mo):
 
 @app.cell
 def _(
+    FIGURES_DIR,
     all_file_indices,
     all_offsets,
     np,
@@ -507,13 +519,15 @@ def _(
 
     plt.suptitle("Example spectrograms from each cluster", fontsize=13)
     plt.tight_layout()
+    fig_clusters.savefig(FIGURES_DIR / "03_cluster_spectrograms.png", dpi=150, bbox_inches="tight")
+    print(f"Saved: {FIGURES_DIR / '03_cluster_spectrograms.png'}")
     fig_clusters
 
     return (cluster_labels,)
 
 
 @app.cell
-def _(cluster_labels, np, plt, umap_coords):
+def _(FIGURES_DIR, cluster_labels, np, plt, umap_coords):
     # Show the UMAP plot again, this time colored by cluster
     fig_labeled, ax_labeled = plt.subplots(figsize=(10, 8))
 
@@ -535,6 +549,8 @@ def _(cluster_labels, np, plt, umap_coords):
     ax_labeled.set_xlabel("UMAP 1")
     ax_labeled.set_ylabel("UMAP 2")
     ax_labeled.set_title("UMAP colored by cluster assignment")
+    fig_labeled.savefig(FIGURES_DIR / "04_umap_by_cluster.png", dpi=150, bbox_inches="tight")
+    print(f"Saved: {FIGURES_DIR / '04_umap_by_cluster.png'}")
     fig_labeled
 
     return
