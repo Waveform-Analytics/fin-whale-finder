@@ -11,9 +11,15 @@
 # (derived from start/end), so old results are never clobbered.
 
 node = "Axial_Base_Seafloor"  # broadband 64 kHz hydrophone
-start = "2025-06-03T12:00:00"
-end = "2025-06-03T18:00:00"
+start = "2025-06-04T12:00:00"
+end = "2025-06-04T18:00:00"
 chunk_hours = 1               # must match when fetch was run
 
 perch_model = "perch_v2"
-n_clusters = 8
+
+# HDBSCAN: minimum number of 5-second windows to form a cluster.
+# 12 = 60 seconds. Raise to suppress small/noisy clusters.
+min_cluster_size = 12
+
+# How many top-scoring anomalous windows to show spectrograms for.
+n_top_anomalies = 12
