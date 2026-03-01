@@ -40,10 +40,15 @@ def _(mo):
 @app.cell
 def _():
     """Imports."""
+    import os
     import pickle
     import tomllib
     from datetime import datetime
     from pathlib import Path
+
+    # XLA needs libdevice to compile GPU kernels. TF doesn't find it automatically
+    # on this JupyterHub; point it at the known location before anything imports TF.
+    os.environ.setdefault("XLA_FLAGS", "--xla_gpu_cuda_data_dir=/opt/conda")
 
     import matplotlib
     matplotlib.use("Agg")  # non-interactive backend for headless environments
