@@ -255,7 +255,10 @@ def run_hdbscan(umap_coords, min_cluster_size):
     print(f"Running HDBSCAN (min_cluster_size={min_cluster_size})...")
     hdb = HDBSCAN(min_cluster_size=min_cluster_size)
     labels = hdb.fit_predict(umap_coords)
-    scores = hdb.outlier_scores_
+    # sklearn's HDBSCAN exposes probabilities_ (cluster membership strength)
+    # rather than GLOSH outlier scores. 1 - probability gives a useful proxy:
+    # noise points (prob=0) get score 1, confident cluster members get score ~0.
+    scores = 1.0 - hdb.probabilities_
 
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise = (labels == -1).sum()
