@@ -15,6 +15,7 @@ dependencies = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "tqdm>=4.67.3",
+    "umap-learn>=0.5.11",
     "xarray>=2026.2.0",
     "yooink>=0.1.9",
 ]
