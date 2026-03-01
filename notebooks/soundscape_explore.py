@@ -232,6 +232,19 @@ def _(WAV_DIR, broadband_chunks, np, wavfile):
         # Replace any NaN/Inf from instrument glitches or data gaps with zeros
         _data = np.nan_to_num(_data, nan=0.0, posinf=0.0, neginf=0.0)
 
+        # Despike: OOI transmits data in 1-second packets; seams between packets
+        # create broadband impulse artifacts. Find samples far from the median
+        # (using MAD, which is robust to spikes themselves) and interpolate over them.
+        _med = np.median(_data)
+        _mad = np.median(np.abs(_data - _med))
+        _spike_mask = np.abs(_data - _med) > 8 * _mad
+        if _spike_mask.any():
+            _idx = np.arange(len(_data))
+            _data[_spike_mask] = np.interp(
+                _idx[_spike_mask], _idx[~_spike_mask], _data[~_spike_mask]
+            )
+            print(f"  Despiked {_spike_mask.sum()} samples ({100*_spike_mask.mean():.2f}%)")
+
         # Remove DC offset and normalize
         _data = _data - _data.mean()
         _peak = np.abs(_data).max()
@@ -276,16 +289,23 @@ def _(FIGURES_DIR, broadband_chunks, np, plt, signal):
     )
     _Sxx_db = 10 * np.log10(_Sxx + 1e-10)
 
+    # Clip colorscale to 2nd–98th percentile so spike artifacts don't
+    # dominate and wash out the actual signal variation.
+    _vmin = np.percentile(_Sxx_db, 2)
+    _vmax = np.percentile(_Sxx_db, 98)
+
     fig_spec, (ax_full, ax_low) = plt.subplots(2, 1, figsize=(14, 8))
 
     # Full range
-    ax_full.pcolormesh(_t, _f, _Sxx_db, shading="gouraud", cmap="viridis")
+    ax_full.pcolormesh(_t, _f, _Sxx_db, shading="gouraud", cmap="viridis",
+                       vmin=_vmin, vmax=_vmax)
     ax_full.set_ylabel("Frequency (Hz)")
     ax_full.set_title(f"Broadband spectrogram — full range (0–{_fs//2} Hz)")
     ax_full.set_ylim(0, _fs // 2)
 
     # Zoomed to Perch's range
-    ax_low.pcolormesh(_t, _f, _Sxx_db, shading="gouraud", cmap="viridis")
+    ax_low.pcolormesh(_t, _f, _Sxx_db, shading="gouraud", cmap="viridis",
+                      vmin=_vmin, vmax=_vmax)
     ax_low.set_ylabel("Frequency (Hz)")
     ax_low.set_xlabel("Time (seconds)")
     ax_low.set_title("Zoomed to Perch's range (60–16,000 Hz)")
