@@ -45,3 +45,6 @@ Thumbs.db
 
 # Environment variables
 .env
+
+# Run logs (from run_days.py)
+logs/

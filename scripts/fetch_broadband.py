@@ -121,6 +121,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Defaults are read from configs/soundscape.toml. CLI args override the config.",
     )
+    parser.add_argument(
+        "--date", metavar="YYYY-MM-DD",
+        help="Fetch a single calendar day (sets --start and --end automatically)",
+    )
     parser.add_argument("--node", default=cfg.get("node", _FALLBACK["node"]))
     parser.add_argument("--start", default=cfg.get("start", _FALLBACK["start"]))
     parser.add_argument("--end", default=cfg.get("end", _FALLBACK["end"]))
@@ -130,6 +134,12 @@ def main():
     parser.add_argument("--status-interval", type=int, default=30,
                         help="Seconds between status updates (default 30)")
     args = parser.parse_args()
+
+    if args.date:
+        from datetime import timedelta
+        _d = datetime.strptime(args.date, "%Y-%m-%d")
+        args.start = _d.strftime("%Y-%m-%dT00:00:00")
+        args.end   = (_d + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00")
 
     if cfg_path:
         print(f"Config:  {cfg_path}")
@@ -162,6 +172,8 @@ def main():
         print("All chunks already cached. Nothing to do.")
         return
 
+    t_fetch_start = time.time()
+
     # Start background status thread
     stop_event = threading.Event()
     monitor = threading.Thread(
@@ -192,8 +204,10 @@ def main():
 
     n_ok = sum(1 for v in results.values() if v in ("cached", "downloaded"))
     n_empty = sum(1 for v in results.values() if v == "empty")
+    elapsed = time.time() - t_fetch_start
     print()
     print(f"Done. {n_ok}/{len(chunks)} chunks available, {n_empty} returned no data.")
+    print(f"Fetch time: {elapsed/60:.1f} min  ({n_to_fetch} downloads, ~{elapsed/max(n_to_fetch,1)/60:.1f} min/chunk)")
     if n_empty:
         print("Empty chunks are normal for gaps in OOI coverage.")
 

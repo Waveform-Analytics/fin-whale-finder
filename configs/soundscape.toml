@@ -1,18 +1,18 @@
 # Soundscape exploration configuration
 # This is the single source of truth for both:
 #   scripts/fetch_broadband.py  (downloads data)
-#   notebooks/soundscape_explore.py  (analyzes it)
+#   scripts/soundscape_explore.py  (analyzes it)
 #
 # To run a different date range, change start/end here, then:
 #   uv run python scripts/fetch_broadband.py   # download
-#   uv run python notebooks/soundscape_explore.py   # analyze
+#   uv run python scripts/soundscape_explore.py   # analyze
 #
 # Output directories are automatically namespaced by run slug
 # (derived from start/end), so old results are never clobbered.
 
-node = "Axial_Base_Seafloor"  # broadband 64 kHz hydrophone
-start = "2025-06-04T12:00:00"
-end = "2025-06-04T18:00:00"
+node = "Oregon_Offshore_Base_Seafloor"  # broadband 64 kHz hydrophone, ~600m, shelf break
+start = "2025-06-04T00:00:00"
+end = "2025-06-05T00:00:00"
 chunk_hours = 1               # must match when fetch was run
 
 perch_model = "perch_v2"
@@ -22,4 +22,16 @@ perch_model = "perch_v2"
 min_cluster_size = 12
 
 # How many top-scoring anomalous windows to show spectrograms for.
-n_top_anomalies = 12
+n_top_anomalies = 0
+
+# Duration (seconds) of spectrogram to display per panel in the figure outputs.
+# 5 = just the Perch window itself. 300 = 5-minute context. 900 = 15-minute context.
+# The display window is centered on the 5-second Perch clip.
+# FFT window auto-scales to keep ~500 time columns regardless of duration.
+spectrogram_duration_s = 300
+
+# Duty cycle: how many minutes of each chunk to embed with Perch.
+# 0 = full chunk (slower, more complete).
+# Common PAM practice: 5–15 min/hour gives good coverage with ~5–25% of the compute.
+# Changing this requires deleting data/embeddings/<slug>/embeddings_dc*m.npz to regenerate.
+duty_cycle_minutes = 5
