@@ -14,12 +14,6 @@ A learning-first project exploring how to find fin whale calls in continuous oce
 
 Each phase builds on the previous: discover candidates, then detect precisely, then model temporal structure.
 
-## Mentorship & connections
-
-- **Liz Ferguson (OSA)** — mentoring on detection/classification theory
-- **Dax, George Voulgaris** — OOI relationships
-- **Andy Reed** — OOI data access expertise
-
 ## Data
 
 OOI hydrophone data, accessed via OOI JupyterHub. Data access utilities will live in this repo initially and may be extracted into a separate package later.
